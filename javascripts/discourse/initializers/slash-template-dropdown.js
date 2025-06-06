@@ -6,7 +6,6 @@ export default {
   initialize(container) {
     withPluginApi("0.8.7", (api) => {
       this.siteSettings = container.lookup("service:site-settings");
-      console.log("[template-dropdown] Initializing with site settings:", siteSettings);
       console.log("[template-dropdown] Plugin API version:", settings.commands);
 
       // ────────────────────────────────────────────────────────────────────────────
