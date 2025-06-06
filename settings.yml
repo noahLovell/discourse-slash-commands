@@ -39,7 +39,8 @@ commands:
     - trigger: the slash‐command (e.g. "/template")
     - templates: an array of {label, text} pairs to display when that trigger is typed.
 template_dropdown_allowed_groups:
-  type: groups
+  type: list
+  list_type: group
   default: ""
   client: true
   description: "Only users in these groups can trigger the /​… template dropdown."
