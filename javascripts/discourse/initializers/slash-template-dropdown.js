@@ -22,7 +22,7 @@ export default {
         .filter((n) => !isNaN(n));
 
       // get the array of IDs for groups the user belongs to
-      const userGroupIds = (currentUser.group_ids || []).map((n) => parseInt(n, 10));
+      const userGroupIds = (currentUser.groups || []).map((g) => parseInt(g.id, 10));
       console.log("[template-dropdown] User group IDs:", userGroupIds);
 
       // if there’s no overlap, stop here
@@ -32,6 +32,7 @@ export default {
         return;
       }
       console.log("[template-dropdown] User is allowed, proceeding with initialization");
+
 
       // ────────────────────────────────────────────────────────────────────────────
       // CARET POSITION HELPER (unchanged)
