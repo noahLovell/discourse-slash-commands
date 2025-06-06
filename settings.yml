@@ -1,4 +1,4 @@
-templates:
+commands:
   default: >-
     []
   json_schema: >-
@@ -7,16 +7,34 @@ templates:
       "items": {
         "type": "object",
         "properties": {
-          "label": {
+          "trigger": {
             "type": "string",
-            "description": "Dropdown label"
+            "description": "Slash command to watch for (e.g. \"/template\")."
           },
-          "text": {
-            "type": "string",
-            "description": "Snippet text (use \\n or actual newlines)"
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Dropdown label"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Snippet text (use \\n or actual newlines)"
+                }
+              },
+              "required": ["label", "text"]
+            },
+            "description": "List of {label, text} objects for this command"
           }
         },
-        "required": ["label", "text"]
+        "required": ["trigger", "templates"]
       }
     }
   client: true
+  description: |
+    Define an array of commands. Each command must have:
+    - trigger: the slash‐command (e.g. "/template")
+    - templates: an array of {label, text} pairs to display when that trigger is typed.
