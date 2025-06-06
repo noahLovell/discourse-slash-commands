@@ -3,10 +3,16 @@ import { withPluginApi } from "discourse/lib/plugin-api";
 export default {
   name: "slash-template-dropdown",
 
-  initialize() {
+  // Accept `container` so we can lookup the `site-settings` service
+  initialize(container) {
     withPluginApi("0.8.7", (api) => {
       // ────────────────────────────────────────────────────────────────────────────
-      // 1. CARET POSITION HELPER
+      // 1. Grab the site-settings service so we can read `templates` later
+      // ────────────────────────────────────────────────────────────────────────────
+      const siteSettings = container.lookup("service:site-settings");
+
+      // ────────────────────────────────────────────────────────────────────────────
+      // 2. CARET POSITION HELPER
       //    Mirrors the textarea’s CSS in a hidden <div> to find the caret’s pixel coords.
       // ────────────────────────────────────────────────────────────────────────────
       function getCaretCoordinates(el, position) {
@@ -46,7 +52,7 @@ export default {
       }
 
       // ────────────────────────────────────────────────────────────────────────────
-      // 2. SHOW DROPDOWN
+      // 3. SHOW DROPDOWN
       //    − Removes any existing dropdown
       //    − Positions it at the caret
       //    − Populates items with keyboard (↑/↓/Enter/Esc) navigation
@@ -161,7 +167,7 @@ export default {
       }
 
       // ────────────────────────────────────────────────────────────────────────────
-      // 3. HOOK INTO THE COMPOSER TEXTAREA WHENEVER IT APPEARS
+      // 4. HOOK INTO THE COMPOSER TEXTAREA WHENEVER IT APPEARS
       //    We poll for “.d-editor-input” then listen for “/template” at line-end.
       // ────────────────────────────────────────────────────────────────────────────
       document.addEventListener("DOMContentLoaded", () => {
@@ -179,13 +185,14 @@ export default {
               const val = textarea.value;
               if (/\/template\s*$/.test(val)) {
                 // === Fetch the “templates” block from theme settings ===
-                const raw = api.getSettings().templates || "[]";
+                // Use the service we looked up above:
+                const raw = siteSettings.templates || "[]";
                 let parsedTemplates = [];
 
                 try {
                   parsedTemplates = JSON.parse(raw);
                 } catch (err) {
-                  // If JSON parsing fails, fallback to empty array
+                  // If JSON parsing fails, fallback to an empty array
                   parsedTemplates = [];
                 }
 
