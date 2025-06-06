@@ -7,17 +7,18 @@ export default {
     withPluginApi("0.8.7", (api) => {
       // ────────────────────────────────────────────────────────────────────────────
       // 1. CARET POSITION HELPER
+      //    Mirrors the textarea’s CSS in a hidden <div> to find the caret’s pixel coords.
       // ────────────────────────────────────────────────────────────────────────────
       function getCaretCoordinates(el, position) {
         const div = document.createElement("div");
         const style = getComputedStyle(el);
         const properties = [
-          "boxSizing","width","height","overflowX","overflowY",
-          "borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth",
-          "paddingTop","paddingRight","paddingBottom","paddingLeft",
-          "fontStyle","fontVariant","fontWeight","fontStretch","fontSize","fontSizeAdjust",
-          "lineHeight","fontFamily","textAlign","textTransform","textIndent",
-          "textDecoration","letterSpacing","wordSpacing"
+          "boxSizing", "width", "height", "overflowX", "overflowY",
+          "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+          "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+          "fontStyle", "fontVariant", "fontWeight", "fontStretch", "fontSize", "fontSizeAdjust",
+          "lineHeight", "fontFamily", "textAlign", "textTransform", "textIndent",
+          "textDecoration", "letterSpacing", "wordSpacing"
         ];
         properties.forEach((prop) => {
           div.style[prop] = style[prop];
@@ -27,10 +28,10 @@ export default {
         div.style.whiteSpace = "pre-wrap";
         div.style.wordWrap = "break-word";
 
-        // put text up to caret into the mirror <div>
+        // Put text up to the caret into the mirror <div>
         div.textContent = el.value.substring(0, position);
 
-        // create a <span> so we can measure exactly where the caret sits
+        // Create a <span> just after the caret so we can measure it
         const span = document.createElement("span");
         span.textContent = el.value.substring(position) || ".";
         div.appendChild(span);
@@ -51,13 +52,13 @@ export default {
       //    − Populates items with keyboard (↑/↓/Enter/Esc) navigation
       // ────────────────────────────────────────────────────────────────────────────
       function showDropdown(textarea, parsedTemplates) {
-        // 2a. remove any existing dropdown
+        // (a) Remove any existing dropdown
         const existing = document.getElementById("my-template-dropdown");
         if (existing) {
           existing.remove();
         }
 
-        // 2b. create dropdown container
+        // (b) Create the dropdown container
         const dropdown = document.createElement("div");
         dropdown.id = "my-template-dropdown";
         dropdown.style.position = "absolute";
@@ -67,7 +68,7 @@ export default {
         dropdown.style.minWidth = "150px";
         dropdown.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
 
-        // 2c. compute caret pixel coords
+        // (c) Compute caret‐pixel coordinates
         const caretPos   = textarea.selectionStart;
         const coords     = getCaretCoordinates(textarea, caretPos);
         const taRect     = textarea.getBoundingClientRect();
@@ -76,7 +77,7 @@ export default {
         dropdown.style.left = `${taRect.left + window.scrollX + coords.left}px`;
         dropdown.style.top  = `${taRect.top  + window.scrollY + coords.top + lineHeight}px`;
 
-        // 2d. build each item from parsedTemplates
+        // (d) Build each item from parsedTemplates
         let selectedIndex = 0;
         const items = [];
 
@@ -86,13 +87,13 @@ export default {
           item.style.padding = "8px";
           item.style.cursor = "pointer";
 
-          // highlight first item
+          // Highlight the first item initially
           if (index === selectedIndex) {
             item.style.background = "#bde4ff";
           }
 
           item.onclick = () => {
-            // remove trailing “/template” and insert snippet
+            // Remove trailing “/template” and insert the chosen snippet
             textarea.value = textarea.value.replace(/\/template\s*$/, "") + t.text;
             cleanup();
             textarea.focus();
@@ -102,7 +103,7 @@ export default {
           items.push(item);
         });
 
-        // 2e. updateSelection (clamped—no wrap)
+        // (e) updateSelection (clamped—no wrap around)
         function updateSelection(newIndex) {
           items[selectedIndex].style.background = "";
           if (newIndex < 0) {
@@ -115,7 +116,7 @@ export default {
           items[selectedIndex].style.background = "#bde4ff";
         }
 
-        // 2f. keyboard nav (↑/↓/Enter/Esc)
+        // (f) Keyboard navigation (↑/↓/Enter/Esc)
         function keydownHandler(e) {
           if (!document.getElementById("my-template-dropdown")) return;
 
@@ -139,14 +140,14 @@ export default {
           }
         }
 
-        // 2g. click‐outside to close
+        // (g) Click‐outside to close
         function bodyClickHandler(e) {
           if (!dropdown.contains(e.target)) {
             cleanup();
           }
         }
 
-        // 2h. cleanup: remove dropdown + unbind
+        // (h) Cleanup: remove dropdown + unbind listeners
         function cleanup() {
           const d = document.getElementById("my-template-dropdown");
           if (d) d.remove();
@@ -161,7 +162,7 @@ export default {
 
       // ────────────────────────────────────────────────────────────────────────────
       // 3. HOOK INTO THE COMPOSER TEXTAREA WHENEVER IT APPEARS
-      //    We poll for “.d-editor-input,” then listen for “/template” at line-end
+      //    We poll for “.d-editor-input” then listen for “/template” at line-end.
       // ────────────────────────────────────────────────────────────────────────────
       document.addEventListener("DOMContentLoaded", () => {
         const observer = new MutationObserver(() => {
@@ -170,22 +171,21 @@ export default {
             textarea.__slashTemplateHooked = true;
 
             textarea.addEventListener("keyup", (e) => {
-              // ignore navigation keys so we don't reopen/reset the dropdown
+              // Ignore navigation keys so we don’t re‐open/reset the dropdown
               if (["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key)) {
                 return;
               }
 
               const val = textarea.value;
               if (/\/template\s*$/.test(val)) {
-                // read raw block from site settings
-                const raw = api.container
-                              .lookup("site:main")
-                              .settings
-                              .templates || "[]";
+                // === Fetch the “templates” block from theme settings ===
+                const raw = api.getSettings().templates || "[]";
                 let parsedTemplates = [];
+
                 try {
                   parsedTemplates = JSON.parse(raw);
                 } catch (err) {
+                  // If JSON parsing fails, fallback to empty array
                   parsedTemplates = [];
                 }
 
