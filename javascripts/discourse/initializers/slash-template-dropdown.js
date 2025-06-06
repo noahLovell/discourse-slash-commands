@@ -6,7 +6,27 @@ export default {
   initialize(container) {
     withPluginApi("0.8.7", (api) => {
       this.siteSettings = container.lookup("service:site-settings");
-      console.log("[template-dropdown] Plugin API version:", settings.commands);
+      const currentUser = api.getCurrentUser();
+      if (!currentUser) {
+        return;
+      }
+
+      // fetch comma-separated list of group IDs from the site setting
+      const rawAllowed = settings.template_dropdown_allowed_groups || "";
+      // e.g. "4,10,27" → [4,10,27]
+      const allowedGroupIds = rawAllowed
+        .split(",")
+        .map((s) => parseInt(s, 10))
+        .filter((n) => !isNaN(n));
+
+      // get the array of IDs for groups the user belongs to
+      const userGroupIds = (currentUser.group_ids || []).map((n) => parseInt(n, 10));
+
+      // if there’s no overlap, stop here
+      const isMember = userGroupIds.some((g) => allowedGroupIds.includes(g));
+      if (!isMember) {
+        return;
+      }
 
       // ────────────────────────────────────────────────────────────────────────────
       // CARET POSITION HELPER (unchanged)
@@ -56,7 +76,7 @@ export default {
       // SHOW DROPDOWN (unchanged except logs)
       // ────────────────────────────────────────────────────────────────────────────
       function showDropdown(textarea, parsedTemplates, matchedTrigger) {
-        console.log("[template-dropdown] showDropdown() called for trigger:", matchedTrigger);
+        // console.log("[template-dropdown] showDropdown() called for trigger:", matchedTrigger);
         const existing = document.getElementById("my-template-dropdown");
         if (existing) {
           existing.remove();
@@ -94,7 +114,7 @@ export default {
           }
 
           item.onclick = () => {
-            console.log("[template-dropdown] inserting text for:", tObj.label);
+            // console.log("[template-dropdown] inserting text for:", tObj.label);
             const regex = new RegExp(`${escapeRegex(matchedTrigger)}\\s*$`);
             textarea.value = textarea.value.replace(regex, "") + tObj.text;
             cleanup();
@@ -161,11 +181,11 @@ export default {
       // HOOK INTO THE COMPOSER
       // ────────────────────────────────────────────────────────────────────────────
       document.addEventListener("DOMContentLoaded", () => {
-        console.log("[template-dropdown] DOMContentLoaded, setting up observer");
+        // console.log("[template-dropdown] DOMContentLoaded, setting up observer");
         const observer = new MutationObserver(() => {
           const textarea = document.querySelector(".d-editor-input");
           if (textarea && !textarea.__slashTemplateHooked) {
-            console.log("[template-dropdown] Found .d-editor-input, hooking keyup");
+            // console.log("[template-dropdown] Found .d-editor-input, hooking keyup");
             textarea.__slashTemplateHooked = true;
 
             textarea.addEventListener("keyup", (e) => {
@@ -175,21 +195,21 @@ export default {
               }
 
               const val = textarea.value;
-              console.log("[template-dropdown] keyup, content is:", JSON.stringify(val));
+              // console.log("[template-dropdown] keyup, content is:", JSON.stringify(val));
 
               // Parse the commands block from settings
               const raw = settings.commands || "[]";
               let commandsArr;
               try {
                 commandsArr = JSON.parse(raw);
-                console.log("[template-dropdown] Parsed commands array:", commandsArr);
+                // console.log("[template-dropdown] Parsed commands array:", commandsArr);
               } catch (err) {
                 console.warn("[template-dropdown] Error parsing commands JSON:", err);
                 commandsArr = [];
               }
 
               if (!Array.isArray(commandsArr) || commandsArr.length === 0) {
-                console.log("[template-dropdown] No commands defined, bailing");
+                // console.log("[template-dropdown] No commands defined, bailing");
                 return;
               }
 
@@ -197,7 +217,7 @@ export default {
               const triggers = commandsArr
                 .map((c) => c.trigger || "")
                 .filter((t) => t.length > 0);
-              console.log("[template-dropdown] Available triggers:", triggers);
+              // console.log("[template-dropdown] Available triggers:", triggers);
 
               if (triggers.length === 0) {
                 return;
@@ -206,26 +226,26 @@ export default {
               const escaped = triggers.map((t) => escapeRegex(t));
               // e.g. /(?:\/template|\/somethingElse)\s*$/
               const reTriggers = new RegExp(`(?:${escaped.join("|")})\\s*$`);
-              console.log("[template-dropdown] Using regex:", reTriggers);
+              // console.log("[template-dropdown] Using regex:", reTriggers);
 
               const match = val.match(reTriggers);
               if (!match) {
-                console.log("[template-dropdown] No trigger match on this input");
+                // console.log("[template-dropdown] No trigger match on this input");
                 return;
               }
 
               const matchedTrigger = match[0].trim();
-              console.log("[template-dropdown] Detected trigger:", matchedTrigger);
+              // console.log("[template-dropdown] Detected trigger:", matchedTrigger);
 
               // Find that command’s own templates
               const cmdObj = commandsArr.find((c) => c.trigger === matchedTrigger);
               let parsedTemplates = Array.isArray(cmdObj?.templates)
                 ? cmdObj.templates
                 : [];
-              console.log("[template-dropdown] Templates for this trigger:", parsedTemplates);
+              // console.log("[template-dropdown] Templates for this trigger:", parsedTemplates);
 
               if (!parsedTemplates.length) {
-                console.log("[template-dropdown] No templates defined for", matchedTrigger);
+                // console.log("[template-dropdown] No templates defined for", matchedTrigger);
                 return;
               }
 
