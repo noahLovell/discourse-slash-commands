@@ -7,12 +7,14 @@ export default {
     withPluginApi("0.8.7", (api) => {
       this.siteSettings = container.lookup("service:site-settings");
       const currentUser = api.getCurrentUser();
+      console.log("[template-dropdown] Initializing with user:", currentUser);
       if (!currentUser) {
         return;
       }
 
       // fetch comma-separated list of group IDs from the site setting
       const rawAllowed = settings.template_dropdown_allowed_groups || "";
+      console.log("[template-dropdown] Allowed groups setting:", rawAllowed);
       // e.g. "4,10,27" → [4,10,27]
       const allowedGroupIds = rawAllowed
         .split(",")
@@ -21,12 +23,15 @@ export default {
 
       // get the array of IDs for groups the user belongs to
       const userGroupIds = (currentUser.group_ids || []).map((n) => parseInt(n, 10));
+      console.log("[template-dropdown] User group IDs:", userGroupIds);
 
       // if there’s no overlap, stop here
       const isMember = userGroupIds.some((g) => allowedGroupIds.includes(g));
+      console.log("[template-dropdown] User is member of allowed groups:", isMember);
       if (!isMember) {
         return;
       }
+      console.log("[template-dropdown] User is allowed, proceeding with initialization");
 
       // ────────────────────────────────────────────────────────────────────────────
       // CARET POSITION HELPER (unchanged)
