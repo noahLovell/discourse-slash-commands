@@ -11,11 +11,6 @@ commands:
             "type": "string",
             "description": "Slash command to watch for (e.g. \"/template\")."
           },
-          "allowed_groups": {
-            "type": "list",
-            "list_type": "group",
-            "description": "List of group‐IDs allowed to use this slash command. Omit or leave empty for no per‐command restriction."
-          },
           "templates": {
             "type": "array",
             "items": {
@@ -33,7 +28,7 @@ commands:
               "required": ["label", "text"]
             },
             "description": "List of {label, text} objects for this command"
-          },
+          }
         },
         "required": ["trigger", "templates"]
       }
@@ -43,10 +38,9 @@ commands:
     Define an array of commands. Each command must have:
     - trigger: the slash‐command (e.g. "/template")
     - templates: an array of {label, text} pairs to display when that trigger is typed.
-    - allowed_groups (optional): an array of group‐IDs that may use this command. If omitted or empty, any user who passes the global check can use it.
 template_dropdown_allowed_groups:
   type: list
   list_type: group
   default: ""
   client: true
-  description: "Only users in these groups can trigger the /… template dropdown."
+  description: "Only users in these groups can trigger the /​… template dropdown."

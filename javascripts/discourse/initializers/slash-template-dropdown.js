@@ -5,88 +5,48 @@ export default {
 
   initialize(container) {
     withPluginApi("0.8.7", (api) => {
-      // ────────────────────────────────────────────────────────────────────────────
-      // 1) LOOK UP SITE SETTINGS & CURRENT USER
-      // ────────────────────────────────────────────────────────────────────────────
       this.siteSettings = container.lookup("service:site-settings");
       const currentUser = api.getCurrentUser();
       console.log("[template-dropdown] Initializing with user:", currentUser);
       if (!currentUser) {
-        return; // not logged in → bail
+        return;
       }
 
-      // ────────────────────────────────────────────────────────────────────────────
-      // 2) GLOBAL “WHO CAN SEE ANY SLASH DROPDOWN?” CHECK
-      //    template_dropdown_allowed_groups is a Discourse‐type “list of groups,”
-      //    so it comes back as a pipe-separated string like "1|10|43".
-      // ────────────────────────────────────────────────────────────────────────────
-      const rawGlobal = settings.template_dropdown_allowed_groups || "";
-      console.log("[template-dropdown] Allowed groups setting:", rawGlobal);
-      // Split on "|" because Discourse returns a pipe-separated string
-      const globalAllowedIds = rawGlobal
+      // fetch comma-separated list of group IDs from the site setting
+      const rawAllowed = settings.template_dropdown_allowed_groups || "";
+      console.log("[template-dropdown] Allowed groups setting:", rawAllowed);
+      // e.g. "4,10,27" → [4,10,27]
+      const allowedGroupIds = rawAllowed
         .split("|")
         .map((s) => parseInt(s, 10))
         .filter((n) => !isNaN(n));
 
-      // Pull the current user’s group IDs from currentUser.groups
-      const userGroupIds = (currentUser.groups || []).map((g) =>
-        parseInt(g.id, 10)
-      );
+      // get the array of IDs for groups the user belongs to
+      const userGroupIds = (currentUser.groups || []).map((g) => parseInt(g.id, 10));
       console.log("[template-dropdown] User group IDs:", userGroupIds);
 
-      // If no overlap, bail out immediately
-      const passesGlobal = userGroupIds.some((id) =>
-        globalAllowedIds.includes(id)
-      );
-      console.log(
-        "[template-dropdown] User is member of allowed groups:",
-        passesGlobal
-      );
-      if (!passesGlobal) {
-        return; // user not in any globally‐allowed group
+      // if there’s no overlap, stop here
+      const isMember = userGroupIds.some((g) => allowedGroupIds.includes(g));
+      console.log("[template-dropdown] User is member of allowed groups:", isMember);
+      if (!isMember) {
+        return;
       }
-      console.log(
-        "[template-dropdown] User is allowed by global setting, continuing…"
-      );
+      console.log("[template-dropdown] User is allowed, proceeding with initialization");
 
-      // Cache these locally so inner functions can reference them:
-      const siteSettings = settings
-      const cachedUserGroupIds = userGroupIds.slice(); // copy the array
 
       // ────────────────────────────────────────────────────────────────────────────
-      // 3) CARET POSITION HELPER (unchanged)
+      // CARET POSITION HELPER (unchanged)
       // ────────────────────────────────────────────────────────────────────────────
       function getCaretCoordinates(el, position) {
         const div = document.createElement("div");
         const style = getComputedStyle(el);
         const propsToCopy = [
-          "boxSizing",
-          "width",
-          "height",
-          "overflowX",
-          "overflowY",
-          "borderTopWidth",
-          "borderRightWidth",
-          "borderBottomWidth",
-          "borderLeftWidth",
-          "paddingTop",
-          "paddingRight",
-          "paddingBottom",
-          "paddingLeft",
-          "fontStyle",
-          "fontVariant",
-          "fontWeight",
-          "fontStretch",
-          "fontSize",
-          "fontSizeAdjust",
-          "lineHeight",
-          "fontFamily",
-          "textAlign",
-          "textTransform",
-          "textIndent",
-          "textDecoration",
-          "letterSpacing",
-          "wordSpacing",
+          "boxSizing", "width", "height", "overflowX", "overflowY",
+          "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+          "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+          "fontStyle", "fontVariant", "fontWeight", "fontStretch", "fontSize", "fontSizeAdjust",
+          "lineHeight", "fontFamily", "textAlign", "textTransform", "textIndent",
+          "textDecoration", "letterSpacing", "wordSpacing"
         ];
         propsToCopy.forEach((p) => {
           div.style[p] = style[p];
@@ -105,23 +65,24 @@ export default {
         document.body.appendChild(div);
         const coords = {
           top: span.offsetTop + parseInt(style["borderTopWidth"], 10),
-          left: span.offsetLeft + parseInt(style["borderLeftWidth"], 10),
+          left: span.offsetLeft + parseInt(style["borderLeftWidth"], 10)
         };
         document.body.removeChild(div);
         return coords;
       }
 
       // ────────────────────────────────────────────────────────────────────────────
-      // 4) ESCAPE REGEX (unchanged)
+      // ESCAPE STRING FOR SAFE REGEX
       // ────────────────────────────────────────────────────────────────────────────
       function escapeRegex(str) {
         return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       }
 
       // ────────────────────────────────────────────────────────────────────────────
-      // 5) SHOW DROPDOWN (unchanged apart from logging)
+      // SHOW DROPDOWN (unchanged except logs)
       // ────────────────────────────────────────────────────────────────────────────
       function showDropdown(textarea, parsedTemplates, matchedTrigger) {
+        // console.log("[template-dropdown] showDropdown() called for trigger:", matchedTrigger);
         const existing = document.getElementById("my-template-dropdown");
         if (existing) {
           existing.remove();
@@ -140,8 +101,7 @@ export default {
         const caretPos = textarea.selectionStart;
         const coords = getCaretCoordinates(textarea, caretPos);
         const taRect = textarea.getBoundingClientRect();
-        const lineHeight =
-          parseInt(getComputedStyle(textarea).lineHeight, 10) || 16;
+        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight, 10) || 16;
 
         dropdown.style.left = `${taRect.left + window.scrollX + coords.left}px`;
         dropdown.style.top = `${taRect.top + window.scrollY + coords.top + lineHeight}px`;
@@ -160,6 +120,7 @@ export default {
           }
 
           item.onclick = () => {
+            // console.log("[template-dropdown] inserting text for:", tObj.label);
             const regex = new RegExp(`${escapeRegex(matchedTrigger)}\\s*$`);
             textarea.value = textarea.value.replace(regex, "") + tObj.text;
             cleanup();
@@ -223,12 +184,14 @@ export default {
       }
 
       // ────────────────────────────────────────────────────────────────────────────
-      // 6) HOOK INTO THE COMPOSER
+      // HOOK INTO THE COMPOSER
       // ────────────────────────────────────────────────────────────────────────────
       document.addEventListener("DOMContentLoaded", () => {
+        // console.log("[template-dropdown] DOMContentLoaded, setting up observer");
         const observer = new MutationObserver(() => {
           const textarea = document.querySelector(".d-editor-input");
           if (textarea && !textarea.__slashTemplateHooked) {
+            // console.log("[template-dropdown] Found .d-editor-input, hooking keyup");
             textarea.__slashTemplateHooked = true;
 
             textarea.addEventListener("keyup", (e) => {
@@ -238,85 +201,57 @@ export default {
               }
 
               const val = textarea.value;
+              // console.log("[template-dropdown] keyup, content is:", JSON.stringify(val));
 
-              // ────────────────────────────────────────────────────────────
-              // 6a) PARSE “commands” SETTING
-              // ────────────────────────────────────────────────────────────
-              const rawCommands = siteSettings.commands || "[]";
+              // Parse the commands block from settings
+              const raw = settings.commands || "[]";
               let commandsArr;
               try {
-                commandsArr = JSON.parse(rawCommands);
+                commandsArr = JSON.parse(raw);
+                // console.log("[template-dropdown] Parsed commands array:", commandsArr);
               } catch (err) {
-                console.warn(
-                  "[template-dropdown] Error parsing commands JSON:",
-                  err
-                );
+                console.warn("[template-dropdown] Error parsing commands JSON:", err);
                 commandsArr = [];
               }
+
               if (!Array.isArray(commandsArr) || commandsArr.length === 0) {
+                // console.log("[template-dropdown] No commands defined, bailing");
                 return;
               }
 
-              // Build regex to see if any trigger sits at the end of the textarea
+              // Build a regex to match any trigger at the very end
               const triggers = commandsArr
                 .map((c) => c.trigger || "")
                 .filter((t) => t.length > 0);
+              // console.log("[template-dropdown] Available triggers:", triggers);
+
               if (triggers.length === 0) {
                 return;
               }
 
               const escaped = triggers.map((t) => escapeRegex(t));
+              // e.g. /(?:\/template|\/somethingElse)\s*$/
               const reTriggers = new RegExp(`(?:${escaped.join("|")})\\s*$`);
+              // console.log("[template-dropdown] Using regex:", reTriggers);
+
               const match = val.match(reTriggers);
               if (!match) {
+                // console.log("[template-dropdown] No trigger match on this input");
                 return;
               }
 
               const matchedTrigger = match[0].trim();
-              const cmdObj = commandsArr.find(
-                (c) => c.trigger === matchedTrigger
-              );
-              if (!cmdObj) {
-                return;
-              }
+              // console.log("[template-dropdown] Detected trigger:", matchedTrigger);
 
-              // ────────────────────────────────────────────────────────────
-              // 6b) PER-COMMAND “WHO CAN USE THIS TRIGGER?” CHECK
-              //    Because in your JSON schema you declared “allowed_groups”
-              //    as a `list` of `group`, Discourse WILL hand you back
-              //    a true array of integers, e.g. [4, 10, 43].
-              //    There is NO pipe‐separated string here—so do NOT split on "|".
-              // ────────────────────────────────────────────────────────────
-              if (
-                Array.isArray(cmdObj.allowed_groups) &&
-                cmdObj.allowed_groups.length
-              ) {
-                // cmdObj.allowed_groups is already something like [4, 10, 43]
-                const cmdAllowedIds = cmdObj.allowed_groups
-                  .map((n) => parseInt(n, 10))
-                  .filter((n) => !isNaN(n));
-
-                const hasAccess = cachedUserGroupIds.some((g) =>
-                  cmdAllowedIds.includes(g)
-                );
-                console.log(
-                  "[template-dropdown] Per-command allowed_groups:",
-                  cmdAllowedIds,
-                  "→ user has access?",
-                  hasAccess
-                );
-                if (!hasAccess) {
-                  return; // user not in this command’s allowed_groups
-                }
-              }
-
-              // ────────────────────────────────────────────────────────────
-              // 6c) SHOW THE DROPDOWN
-              // ────────────────────────────────────────────────────────────
-              const parsedTemplates = Array.isArray(cmdObj.templates)
+              // Find that command’s own templates
+              const cmdObj = commandsArr.find((c) => c.trigger === matchedTrigger);
+              let parsedTemplates = Array.isArray(cmdObj?.templates)
                 ? cmdObj.templates
                 : [];
+              // console.log("[template-dropdown] Templates for this trigger:", parsedTemplates);
+
               if (!parsedTemplates.length) {
+                // console.log("[template-dropdown] No templates defined for", matchedTrigger);
                 return;
               }
 
@@ -328,5 +263,5 @@ export default {
         observer.observe(document.body, { childList: true, subtree: true });
       });
     });
-  },
+  }
 };
