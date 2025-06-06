@@ -1,2 +1,22 @@
-example_setting:
-  default: true
+templates:
+  default: >-
+    []
+  json_schema: >-
+    {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Dropdown label"
+          },
+          "text": {
+            "type": "string",
+            "description": "Snippet text (use \\n or actual newlines)"
+          }
+        },
+        "required": ["label", "text"]
+      }
+    }
+  client: true
