@@ -5,8 +5,9 @@ export default {
 
   initialize(container) {
     withPluginApi("0.8.7", (api) => {
-      const siteSettings = container.lookup("service:site-settings");
+      this.siteSettings = container.lookup("service:site-settings");
       console.log("[template-dropdown] Initializing with site settings:", siteSettings);
+      console.log("[template-dropdown] Plugin API version:", settings.commands);
 
       // ────────────────────────────────────────────────────────────────────────────
       // CARET POSITION HELPER (unchanged)
@@ -15,12 +16,12 @@ export default {
         const div = document.createElement("div");
         const style = getComputedStyle(el);
         const propsToCopy = [
-          "boxSizing","width","height","overflowX","overflowY",
-          "borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth",
-          "paddingTop","paddingRight","paddingBottom","paddingLeft",
-          "fontStyle","fontVariant","fontWeight","fontStretch","fontSize","fontSizeAdjust",
-          "lineHeight","fontFamily","textAlign","textTransform","textIndent",
-          "textDecoration","letterSpacing","wordSpacing"
+          "boxSizing", "width", "height", "overflowX", "overflowY",
+          "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+          "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+          "fontStyle", "fontVariant", "fontWeight", "fontStretch", "fontSize", "fontSizeAdjust",
+          "lineHeight", "fontFamily", "textAlign", "textTransform", "textIndent",
+          "textDecoration", "letterSpacing", "wordSpacing"
         ];
         propsToCopy.forEach((p) => {
           div.style[p] = style[p];
@@ -38,7 +39,7 @@ export default {
 
         document.body.appendChild(div);
         const coords = {
-          top:  span.offsetTop  + parseInt(style["borderTopWidth"], 10),
+          top: span.offsetTop + parseInt(style["borderTopWidth"], 10),
           left: span.offsetLeft + parseInt(style["borderLeftWidth"], 10)
         };
         document.body.removeChild(div);
@@ -72,13 +73,13 @@ export default {
         dropdown.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
         dropdown.style.borderRadius = "4px";
 
-        const caretPos   = textarea.selectionStart;
-        const coords     = getCaretCoordinates(textarea, caretPos);
-        const taRect     = textarea.getBoundingClientRect();
+        const caretPos = textarea.selectionStart;
+        const coords = getCaretCoordinates(textarea, caretPos);
+        const taRect = textarea.getBoundingClientRect();
         const lineHeight = parseInt(getComputedStyle(textarea).lineHeight, 10) || 16;
 
         dropdown.style.left = `${taRect.left + window.scrollX + coords.left}px`;
-        dropdown.style.top  = `${taRect.top  + window.scrollY + coords.top + lineHeight}px`;
+        dropdown.style.top = `${taRect.top + window.scrollY + coords.top + lineHeight}px`;
 
         let selectedIndex = 0;
         const items = [];
@@ -178,7 +179,7 @@ export default {
               console.log("[template-dropdown] keyup, content is:", JSON.stringify(val));
 
               // Parse the commands block from settings
-              const raw = siteSettings.commands || "[]";
+              const raw = settings.commands || "[]";
               let commandsArr;
               try {
                 commandsArr = JSON.parse(raw);
