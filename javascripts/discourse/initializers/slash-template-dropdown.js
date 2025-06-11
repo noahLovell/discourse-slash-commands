@@ -108,7 +108,7 @@ export default {
         dropdown.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
         dropdown.style.borderRadius = "4px";
 
-        const caretPos = textarea.selectionStart;
+        const caretPos = ("selectionStart" in textarea) ? textarea.selectionStart : (textarea.isContentEditable ? getContentEditableCaretPosition(textarea) : 0);
         const coords = getCaretCoordinates(textarea, caretPos);
         const taRect = textarea.getBoundingClientRect();
         const lineHeight = parseInt(getComputedStyle(textarea).lineHeight, 10) || 16;
@@ -132,7 +132,17 @@ export default {
           item.onclick = () => {
             // console.log("[template-dropdown] inserting text for:", tObj.label);
             const regex = new RegExp(`${escapeRegex(matchedTrigger)}\\s*$`);
-            textarea.value = textarea.value.replace(regex, "") + tObj.text;
+            if ("value" in textarea) {
+              textarea.value = textarea.value.replace(regex, "") + tObj.text;
+            } else if (textarea.isContentEditable) {
+              // Remove the trigger from the end and insert the template
+              let val = textarea.innerText || textarea.textContent || "";
+              val = val.replace(regex, "") + tObj.text;
+              // Insert as plain text, preserving caret position if possible
+              textarea.innerText = val;
+              // Optionally, move caret to end
+              setCaretToEnd(textarea);
+            }
             cleanup();
             textarea.focus();
           };
@@ -286,3 +296,32 @@ export default {
     });
   }
 };
+
+// Helper to get caret position in contenteditable div
+function getContentEditableCaretPosition(el) {
+  let position = 0;
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    if (range.commonAncestorContainer.parentNode === el || el.contains(range.commonAncestorContainer)) {
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(el);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      position = preCaretRange.toString().length;
+    }
+  }
+  return position;
+}
+
+// Helper to set caret to end in contenteditable div
+function setCaretToEnd(el) {
+  if (el.isContentEditable) {
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
