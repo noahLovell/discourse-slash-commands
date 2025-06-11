@@ -133,14 +133,15 @@ export default {
             // console.log("[template-dropdown] inserting text for:", tObj.label);
             const regex = new RegExp(`${escapeRegex(matchedTrigger)}\\s*$`);
             if ("value" in textarea) {
-              textarea.value = textarea.value.replace(regex, "") + tObj.text;
+              // Remove the trigger from the end and insert the template
+              let val = textarea.value;
+              val = val.replace(regex, "");
+              textarea.value = val + tObj.text;
             } else if (textarea.isContentEditable) {
               // Remove the trigger from the end and insert the template
               let val = textarea.innerText || textarea.textContent || "";
-              val = val.replace(regex, "") + tObj.text;
-              // Insert as plain text, preserving caret position if possible
-              textarea.innerText = val;
-              // Optionally, move caret to end
+              val = val.replace(regex, "");
+              textarea.innerText = val + tObj.text;
               setCaretToEnd(textarea);
             }
             cleanup();
