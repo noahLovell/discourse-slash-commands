@@ -200,7 +200,18 @@ export default {
                 return;
               }
 
-              const val = textarea.value;
+              // Support both textarea and contenteditable div
+              let val;
+              if ("value" in textarea) {
+                val = textarea.value;
+              } else if (textarea.isContentEditable) {
+                val = textarea.innerText || textarea.textContent;
+              } else {
+                val = "";
+              }
+
+              // If val is still falsy, bail out
+              if (!val) return;
               // console.log("[template-dropdown] keyup, content is:", JSON.stringify(val));
 
               // Parse the commands block from settings
