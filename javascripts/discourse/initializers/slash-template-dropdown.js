@@ -56,10 +56,20 @@ export default {
         div.style.whiteSpace = "pre-wrap";
         div.style.wordWrap = "break-word";
 
-        div.textContent = el.value.substring(0, position);
+        // Support both textarea and contenteditable div
+        let textValue;
+        if ("value" in el) {
+          textValue = el.value;
+        } else if (el.isContentEditable) {
+          textValue = el.innerText || el.textContent || "";
+        } else {
+          textValue = "";
+        }
+
+        div.textContent = textValue.substring(0, position);
 
         const span = document.createElement("span");
-        span.textContent = el.value.substring(position) || ".";
+        span.textContent = textValue.substring(position) || ".";
         div.appendChild(span);
 
         document.body.appendChild(div);
